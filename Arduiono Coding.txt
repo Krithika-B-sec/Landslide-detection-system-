@@ -1,0 +1,80 @@
+#include <SoftwareSerial.h>
+ 
+SoftwareSerial nodemcu(2,3);
+#define DHTPIN 12     // what pin we're connected to
+ 
+//Uncomment whatever the type of sensor we are using. 
+#define DHTTYPE DHT11   // DHT 11 
+//#define DHTTYPE DHT22   // DHT 22  (AM2302)
+//#define DHTTYPE DHT21   // DHT 21 (AM2301)
+ 
+// Initialize DHT sensor for normal 16mhz Arduino
+DHT dht(DHTPIN, DHTTYPE);
+ 
+boolean tflag = false; // temperature flag. 
+// this flag will be used to stop unnecessary repetition of code.
+ 
+int relay = 13; 
+ 
+int sdata1 = 0; // humidity
+int sdata2 = 0; // temperature
+ 
+ 
+String cdata; // complete data, consisting of sensors values
+ 
+void setup()
+{
+Serial.begin(9600); 
+nodemcu.begin(9600);
+dht.begin();
+ 
+ 
+pinMode(4, OUTPUT); // dht11 vcc pin is connected with pin 4
+digitalWrite(4, HIGH); 
+ 
+}
+ 
+void loop()
+{
+    // Wait a few seconds between measurements.
+  delay(2000);
+   // Reading temperature or humidity takes about 250 milliseconds!
+  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+  int h = dht.readHumidity();
+  // Read temperature as Celsius
+  int t = dht.readTemperature();
+  // Read temperature as Fahrenheit
+  int f = dht.readTemperature(true);
+  
+  // Check if any reads failed and exit early (to try again).
+  if (isnan(h) || isnan(t) || isnan(f)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+ 
+  // Compute heat index
+  // Must send in temp in Fahrenheit!
+  int hi = dht.computeHeatIndex(f, h);
+ 
+if ( (t > 32 ) && ( tflag == false ) )
+{
+ digitalWrite(relay, HIGH); 
+ Serial.println("Fan is On");
+tflag = true;  
+}
+ 
+if ( (t <= 32 ) && ( tflag == true ) )
+{
+ digitalWrite(relay, LOW); 
+  Serial.println("Fan is Off");
+tflag = false;  
+}
+    sdata1 = h;
+    sdata2 = t; 
+   cdata = cdata + sdata1+","+sdata2; // comma will be used a delimeter
+   Serial.println(cdata); 
+   nodemcu.println(cdata);
+delay(500);
+   cdata = ""; 
+ 
+}
